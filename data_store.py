@@ -12,10 +12,21 @@ from dotenv import load_dotenv
 
 import fallback_data
 import football_api
+from football_api import (
+    get_live_matches, get_today_matches, get_upcoming_matches,
+    get_completed_matches, get_standings, get_top_scorers
+)
 
 load_dotenv()
 
-USE_REAL_API = False
+USE_REAL_API = True
+
+# Tracker to verify if the last API call succeeded
+LAST_API_SUCCESS = False
+
+def is_using_real_data():
+    """Returns True if the last API call succeeded."""
+    return LAST_API_SUCCESS
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  Paths
@@ -224,76 +235,94 @@ def get_data(endpoint):
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 def get_live_matches():
-    """Get live matches list."""
-    return get_data("live_matches")
+    """Get live matches list, falling back to mock data if empty/None."""
+    global LAST_API_SUCCESS
+    res = football_api.get_live_matches()
+    if res is not None:
+        LAST_API_SUCCESS = True
+        return res
+    LAST_API_SUCCESS = False
+    return fallback_data.DEMO_LIVE
 
 
 def get_today_matches():
-    """Get today's matches list."""
-    return get_data("today_matches")
+    """Get today's matches list, falling back to mock data if empty/None."""
+    global LAST_API_SUCCESS
+    res = football_api.get_today_matches()
+    if res is not None:
+        LAST_API_SUCCESS = True
+        return res
+    LAST_API_SUCCESS = False
+    return fallback_data.DEMO_MATCHES
 
 
 def get_upcoming_matches():
-    """Get upcoming matches list."""
-    return get_data("upcoming_matches")
+    """Get upcoming matches list, falling back to mock data if empty/None."""
+    global LAST_API_SUCCESS
+    res = football_api.get_upcoming_matches()
+    if res is not None:
+        LAST_API_SUCCESS = True
+        return res
+    LAST_API_SUCCESS = False
+    return fallback_data.DEMO_UPCOMING
 
 
 def get_completed_matches():
-    """Get completed matches list."""
-    return get_data("completed_matches")
+    """Get completed matches list, falling back to mock data if empty/None."""
+    global LAST_API_SUCCESS
+    res = football_api.get_completed_matches()
+    if res is not None:
+        LAST_API_SUCCESS = True
+        return res
+    LAST_API_SUCCESS = False
+    return fallback_data.DEMO_COMPLETED
 
 
 def get_standings():
-    """Get standings dict."""
-    return get_data("standings")
+    """Get standings dict, falling back to mock data if empty/None."""
+    global LAST_API_SUCCESS
+    res = football_api.get_standings()
+    if res is not None:
+        LAST_API_SUCCESS = True
+        return res
+    LAST_API_SUCCESS = False
+    return fallback_data.DEMO_STANDINGS
+
+
+def get_top_scorers():
+    """Get top scorers list, falling back to mock data if empty/None."""
+    global LAST_API_SUCCESS
+    res = football_api.get_top_scorers()
+    if res is not None:
+        LAST_API_SUCCESS = True
+        return res
+    LAST_API_SUCCESS = False
+    return fallback_data.DEMO_SCORERS
 
 
 def get_smart_match_cards():
     """Returns exactly 3 match cards using this priority:
-    1. If live matches exist: 1 live + 2 upcoming
-    2. If no live but upcoming exist: 2 upcoming + 1 completed
-    3. If no upcoming: 3 completed
-    4. If all empty: return fallback_data.DEMO_MATCHES[:3]
+    - if live: return live[:1] + upcoming[:2]
+    - elif upcoming: return upcoming[:2] + completed[:1]
+    - else: return completed[:3]
+    If result is empty / less than 3, returns fallback_data.DEMO_MATCHES[:3].
     Never returns more or fewer than 3 matches."""
     live = get_live_matches() or []
     upcoming = get_upcoming_matches() or []
     completed = get_completed_matches() or []
     
     selected = []
-    
-    # 1. If live matches exist: 1 live + 2 upcoming
-    if len(live) > 0:
-        selected.append(live[0])
-        selected.extend(upcoming[:2])
-        if len(selected) < 3:
-            # fill from remaining live
-            selected.extend(live[1:])
-        if len(selected) < 3:
-            # fill from completed
-            selected.extend(completed)
-            
-    # 2. If no live but upcoming exist: 2 upcoming + 1 completed
-    elif len(upcoming) > 0:
-        selected.extend(upcoming[:2])
-        selected.extend(completed[:1])
-        if len(selected) < 3:
-            # fill from remaining upcoming
-            selected.extend(upcoming[2:])
-        if len(selected) < 3:
-            # fill from live
-            selected.extend(live)
-            
-    # 3. If no upcoming: 3 completed
+    if live:
+        selected = live[:1] + upcoming[:2]
+    elif upcoming:
+        selected = upcoming[:2] + completed[:1]
     else:
-        selected.extend(completed[:3])
-        if len(selected) < 3:
-            # fill from live
-            selected.extend(live)
-            
-    selected = selected[:3]
-    
-    # 4. If all empty / less than 3: return fallback_data.DEMO_MATCHES[:3]
-    if len(selected) < 3:
+        selected = completed[:3]
+        
+    if not selected or len(selected) != 3:
+        if is_using_real_data():
+            # If using real data but don't have enough matches, pad with empty dicts or return what we have
+            return selected + [{}] * max(0, 3 - len(selected))
         return fallback_data.DEMO_MATCHES[:3]
         
     return selected

@@ -355,6 +355,7 @@ DEMO_SCORERS = [
         },
         "goals": 3,
         "assists": 1,
+        "matches_played": 3,
     },
     {
         "player": {
@@ -369,6 +370,7 @@ DEMO_SCORERS = [
         },
         "goals": 2,
         "assists": 2,
+        "matches_played": 3,
     },
     {
         "player": {
@@ -383,6 +385,7 @@ DEMO_SCORERS = [
         },
         "goals": 2,
         "assists": 1,
+        "matches_played": 2,
     },
     {
         "player": {
@@ -397,6 +400,7 @@ DEMO_SCORERS = [
         },
         "goals": 2,
         "assists": 0,
+        "matches_played": 3,
     },
     {
         "player": {
@@ -411,5 +415,6 @@ DEMO_SCORERS = [
         },
         "goals": 1,
         "assists": 3,
+        "matches_played": 3,
     },
 ]

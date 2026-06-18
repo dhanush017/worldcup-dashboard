@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: cuppulse-2026
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:server
+    envVars:
+      - key: FOOTBALL_API_KEY
+        sync: false
+      - key: FOOTBALL_COMPETITION_CODE
+        value: WC
+      - key: FOOTBALL_COMPETITION_ID
+        value: "2000"

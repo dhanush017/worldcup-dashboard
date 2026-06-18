@@ -5,22 +5,26 @@ from dash import html, dcc
 #  1. create_header
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+def create_demo_banner():
+    """Returns the demo mode banner component."""
+    return html.Div(
+        "⚠ Demo Mode — Live data unavailable. Showing sample data.",
+        style={
+            "backgroundColor": "#D97706",
+            "color": "#FFFFFF",
+            "textAlign": "center",
+            "padding": "8px 16px",
+            "fontWeight": "bold",
+            "fontSize": "14px",
+            "width": "100%",
+        }
+    )
+
 def create_header(last_updated="Updated --:-- IST", demo_mode=False):
     """Create the header area with CupPulse title, subtitle, update time, and optional demo banner."""
     banner = None
     if demo_mode:
-        banner = html.Div(
-            "⚠ Demo Mode — Live data unavailable. Showing sample data.",
-            style={
-                "backgroundColor": "#D97706",
-                "color": "#FFFFFF",
-                "textAlign": "center",
-                "padding": "8px 16px",
-                "fontWeight": "bold",
-                "fontSize": "14px",
-                "width": "100%",
-            }
-        )
+        banner = create_demo_banner()
         
     header_content = html.Div(
         dbc.Row(
@@ -666,7 +670,147 @@ def create_standings_section(standings):
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  6. create_empty_state
+#  6. create_top_scorers_section
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+_RANK_MEDALS = {1: "🥇", 2: "🥈", 3: "🥉"}
+_RANK_COLORS = {1: "#FFD700", 2: "#C0C0C0", 3: "#CD7F32"}
+
+def create_top_scorers_section(scorers):
+    """Create a premium dark-themed Top Scorers / Golden Boot leaderboard."""
+    if not scorers:
+        return create_empty_state("Top scorer data not yet available.")
+
+    headers = [
+        html.Th("Rank", style={"textAlign": "center", "width": "60px"}),
+        html.Th("Player"),
+        html.Th("Team", style={"textAlign": "center"}),
+        html.Th("MP", style={"textAlign": "center", "width": "50px"}),
+        html.Th("Goals", style={"textAlign": "center", "width": "70px"}),
+        html.Th("Assists", style={"textAlign": "center", "width": "70px"}),
+    ]
+
+    rows = []
+    for idx, scorer in enumerate(scorers, start=1):
+        player = scorer.get("player", {}) or {}
+        player_name = player.get("name", "Unknown")
+
+        team = scorer.get("team", {}) or {}
+        team_name = team.get("name", "")
+        team_flag = team.get("flag", "")
+
+        goals = scorer.get("goals", 0)
+        assists = scorer.get("assists", 0)
+        matches_played = scorer.get("matches_played", "-")
+
+        # Rank display with medal for top 3
+        medal = _RANK_MEDALS.get(idx, "")
+        rank_color = _RANK_COLORS.get(idx, "#94A3B8")
+        rank_display = html.Span(
+            f"{medal} {idx}" if medal else str(idx),
+            style={"fontWeight": "bold", "color": rank_color, "fontSize": "14px"}
+        )
+
+        # Player name styling — bold gold for #1
+        player_style = {
+            "fontWeight": "700" if idx <= 3 else "600",
+            "color": rank_color if idx <= 3 else "#F8FAFC",
+            "fontSize": "14px",
+        }
+
+        # Team cell with flag
+        team_cell = html.Div(
+            [
+                html.Img(
+                    src=team_flag,
+                    style={
+                        "width": "20px", "height": "14px",
+                        "objectFit": "cover", "borderRadius": "2px",
+                        "marginRight": "8px"
+                    }
+                ) if team_flag else None,
+                html.Span(team_name, style={"color": "#94A3B8", "fontSize": "13px"})
+            ],
+            style={"display": "flex", "alignItems": "center", "justifyContent": "center"}
+        )
+
+        # Goals with accent color
+        goals_cell = html.Span(
+            str(goals),
+            style={
+                "fontWeight": "bold",
+                "color": "#10B981" if goals >= 3 else "#F8FAFC",
+                "fontSize": "15px"
+            }
+        )
+
+        row_style = {"verticalAlign": "middle"}
+        if idx <= 3:
+            row_style["backgroundColor"] = "rgba(255, 215, 0, 0.03)" if idx == 1 else (
+                "rgba(192, 192, 192, 0.03)" if idx == 2 else "rgba(205, 127, 50, 0.03)"
+            )
+
+        rows.append(
+            html.Tr(
+                [
+                    html.Td(rank_display, style={"textAlign": "center"}),
+                    html.Td(
+                        html.Span(player_name, style=player_style)
+                    ),
+                    html.Td(team_cell),
+                    html.Td(
+                        str(matches_played),
+                        style={"textAlign": "center", "color": "#64748B", "fontSize": "13px"}
+                    ),
+                    html.Td(goals_cell, style={"textAlign": "center"}),
+                    html.Td(
+                        str(assists),
+                        style={"textAlign": "center", "color": "#94A3B8", "fontSize": "13px"}
+                    ),
+                ],
+                style=row_style
+            )
+        )
+
+    table = dbc.Table(
+        [
+            html.Thead(html.Tr(headers), style={"backgroundColor": "#1E293B"}),
+            html.Tbody(rows)
+        ],
+        bordered=True,
+        hover=True,
+        responsive=True,
+        striped=True,
+        color="dark",
+        style={
+            "backgroundColor": "#121824",
+            "borderColor": "#1E293B",
+            "color": "#F8FAFC",
+            "borderRadius": "8px",
+            "overflow": "hidden",
+            "fontSize": "13px"
+        }
+    )
+
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Span("⚽", style={"fontSize": "20px", "marginRight": "10px"}),
+                    html.Span("Golden Boot Race", style={
+                        "fontSize": "16px", "fontWeight": "bold", "color": "#FFD700",
+                        "letterSpacing": "0.5px"
+                    })
+                ],
+                style={"display": "flex", "alignItems": "center", "marginBottom": "16px"}
+            ),
+            table
+        ]
+    )
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  7. create_empty_state
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 def create_empty_state(message):

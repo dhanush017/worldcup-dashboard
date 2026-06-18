@@ -9,14 +9,16 @@ from dotenv import load_dotenv
 import pytz
 from datetime import datetime
 
-from components import create_header, create_match_cards, create_matches_table, create_standings_section, create_empty_state
+from components import create_header, create_demo_banner, create_match_cards, create_matches_table, create_standings_section, create_top_scorers_section, create_empty_state
 from data_store import (
     get_smart_match_cards,
     get_today_matches,
     get_live_matches,
     get_upcoming_matches,
     get_completed_matches,
-    get_standings
+    get_standings,
+    get_top_scorers,
+    is_using_real_data
 )
 
 load_dotenv()
@@ -27,6 +29,7 @@ def get_current_ist_time():
     tz = pytz.timezone("Asia/Kolkata")
     now = datetime.now(tz)
     return now.strftime("Updated %H:%M IST")
+
 
 app = dash.Dash(
     __name__,
@@ -52,19 +55,7 @@ app.layout = html.Div(
             [
                 # Container for Demo Mode Banner
                 html.Div(
-                    id="demo-mode-banner",
-                    children=html.Div(
-                        "⚠ Demo Mode — Live data unavailable. Showing sample data.",
-                        style={
-                            "backgroundColor": "#D97706",
-                            "color": "#FFFFFF",
-                            "textAlign": "center",
-                            "padding": "8px 16px",
-                            "fontWeight": "bold",
-                            "fontSize": "14px",
-                            "width": "100%",
-                        }
-                    )
+                    id="demo-mode-banner"
                 ),
                 
                 # Header main content
@@ -183,6 +174,26 @@ app.layout = html.Div(
                     ]
                 ),
                 
+                # Top Scorers / Golden Boot Section
+                html.Div(
+                    [
+                        html.H2(
+                            "Top Scorers", 
+                            style={
+                                "color": "#F8FAFC", 
+                                "marginBottom": "20px", 
+                                "fontWeight": "bold", 
+                                "fontSize": "22px"
+                            }
+                        ),
+                        html.Div(
+                            id="top-scorers-section",
+                            children=create_top_scorers_section(get_top_scorers())
+                        )
+                    ],
+                    style={"marginTop": "40px", "marginBottom": "40px"}
+                ),
+                
                 # Group Standings Section
                 html.Div(
                     [
@@ -220,12 +231,13 @@ app.layout = html.Div(
         Output("match-cards-container", "children"),
         Output("live-scores-section", "children"),
         Output("header-last-updated", "children"),
-        Output("demo-mode-banner", "children"),
     ],
-    [Input("live-interval", "n_intervals")]
+    [Input("live-interval", "n_intervals")],
+    prevent_initial_call=True
 )
 def refresh_live_data(n_intervals):
     """Update featured matches, live matches list, header timestamp, and demo banner."""
+    print(f"[Live Callback] Firing at interval #{n_intervals}")
     # 1. Match Cards
     smart_cards = create_match_cards(get_smart_match_cards())
     
@@ -244,21 +256,15 @@ def refresh_live_data(n_intervals):
     # 3. Header Timestamp
     timestamp = get_current_ist_time()
     
-    # 4. Demo Mode Banner
-    demo_banner = html.Div(
-        "⚠ Demo Mode — Live data unavailable. Showing sample data.",
-        style={
-            "backgroundColor": "#D97706",
-            "color": "#FFFFFF",
-            "textAlign": "center",
-            "padding": "8px 16px",
-            "fontWeight": "bold",
-            "fontSize": "14px",
-            "width": "100%",
-        }
-    )
-    
-    return smart_cards, live_section, timestamp, demo_banner
+    return smart_cards, live_section, timestamp
+
+@app.callback(
+    Output("demo-mode-banner", "children"),
+    Input("live-interval", "n_intervals")
+)
+def update_demo_banner(n):
+    demo_mode = not is_using_real_data()
+    return create_demo_banner() if demo_mode else None
 
 
 # Callback 2: Standard Interval Refresh (every 10 minutes)
@@ -267,17 +273,20 @@ def refresh_live_data(n_intervals):
         Output("today-matches-table", "children"),
         Output("upcoming-matches-table", "children"),
         Output("completed-matches-table", "children"),
+        Output("top-scorers-section", "children"),
         Output("standings-section", "children"),
     ],
-    [Input("standard-interval", "n_intervals")]
+    [Input("standard-interval", "n_intervals")],
+    prevent_initial_call=True
 )
 def refresh_standard_data(n_intervals):
-    """Update general tables (Today's, Upcoming, Completed) and Group Standings."""
+    """Update general tables (Today's, Upcoming, Completed), Top Scorers, and Group Standings."""
     today = create_matches_table(get_today_matches(), "Today's Matches")
     upcoming = create_matches_table(get_upcoming_matches(), "Upcoming Matches")
     completed = create_matches_table(get_completed_matches(), "Completed Matches")
+    scorers = create_top_scorers_section(get_top_scorers())
     standings = create_standings_section(get_standings())
-    return today, upcoming, completed, standings
+    return today, upcoming, completed, scorers, standings
 
 
 if __name__ == "__main__":
