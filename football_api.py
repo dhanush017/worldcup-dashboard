@@ -109,10 +109,12 @@ def normalize_match(raw):
     home_name = normalize_team_name(safe_get(raw, ["homeTeam", "name"], "TBD"))
     home_id = safe_get(raw, ["homeTeam", "id"])
     home_flag = safe_get(raw, ["homeTeam", "crest"], "")
+    home_tla = safe_get(raw, ["homeTeam", "tla"], "")
     
     away_name = normalize_team_name(safe_get(raw, ["awayTeam", "name"], "TBD"))
     away_id = safe_get(raw, ["awayTeam", "id"])
     away_flag = safe_get(raw, ["awayTeam", "crest"], "")
+    away_tla = safe_get(raw, ["awayTeam", "tla"], "")
     
     # Extract Scores
     home_score = safe_get(raw, ["score", "fullTime", "home"])
@@ -176,8 +178,8 @@ def normalize_match(raw):
         "status": status,
         "status_short": status_short,
         "status_display": status_display,
-        "home_team": {"id": home_id, "name": home_name, "flag": home_flag},
-        "away_team": {"id": away_id, "name": away_name, "flag": away_flag},
+        "home_team": {"id": home_id, "name": home_name, "flag": home_flag, "tla": home_tla},
+        "away_team": {"id": away_id, "name": away_name, "flag": away_flag, "tla": away_tla},
         "score": {"home": home_score, "away": away_score},
         "venue": venue,
         "kickoff_utc": kickoff_utc,

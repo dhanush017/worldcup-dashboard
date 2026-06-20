@@ -1,5 +1,6 @@
 import dash_bootstrap_components as dbc
 from dash import html, dcc
+from utils import get_watch_url
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  1. create_header
@@ -327,6 +328,40 @@ def create_match_card(match):
             )
         card_content.append(win_prob_elem)
         
+    watch_url = get_watch_url(match)
+    if status == "live" and watch_url:
+        card_content.append(html.A(
+            "Watch Live 🔴",
+            href=watch_url,
+            target="_blank",
+            style={
+                "display": "block",
+                "textAlign": "center",
+                "marginTop": "10px",
+                "padding": "6px 12px",
+                "background": "#FF3B3B",
+                "color": "white",
+                "borderRadius": "8px",
+                "textDecoration": "none",
+                "fontWeight": "bold",
+                "fontSize": "13px"
+            }
+        ))
+    elif status == "scheduled" and watch_url:
+        card_content.append(html.A(
+            "Where to Watch →",
+            href=watch_url,
+            target="_blank",
+            style={
+                "display": "block",
+                "textAlign": "center",
+                "marginTop": "10px",
+                "color": "#00C2FF",
+                "fontSize": "12px",
+                "textDecoration": "none"
+            }
+        ))
+        
     return html.Div(card_content, style=card_style, className="h-100")
 
 
@@ -371,6 +406,7 @@ def create_matches_table(matches, title):
         html.Th("Group/Round", style={"textAlign": "center"}),
         html.Th("Venue", style={"textAlign": "center"}),
         html.Th("Status", style={"textAlign": "center", "width": "120px"}),
+        html.Th("Watch", style={"textAlign": "center", "width": "80px"}),
     ]
     
     table_rows = []
@@ -449,6 +485,12 @@ def create_matches_table(matches, title):
         if status == "completed":
             row_style["opacity"] = "0.75"
             
+        watch_url = get_watch_url(m)
+        if watch_url:
+            watch_elem = html.A("▶ Watch", href=watch_url, target="_blank", style={"color": "#00C2FF", "textDecoration": "none", "fontWeight": "bold", "fontSize": "13px"})
+        else:
+            watch_elem = html.Span("-", style={"color": "#64748B"})
+            
         table_rows.append(
             html.Tr(
                 [
@@ -457,6 +499,7 @@ def create_matches_table(matches, title):
                     html.Td(group_round_text, style={"textAlign": "center", "color": "#94A3B8"}),
                     html.Td(venue or "TBD", style={"textAlign": "center", "color": "#64748B", "fontSize": "13px"}),
                     html.Td(status_elem, style={"textAlign": "center"}),
+                    html.Td(watch_elem, style={"textAlign": "center"}),
                 ],
                 style=row_style
             )

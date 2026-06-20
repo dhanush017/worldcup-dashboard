@@ -202,3 +202,35 @@ def calculate_match_importance(match, standings):
                 score += 10
 
     return min(score, 100)
+
+def get_watch_url(match):
+    """Builds ppv.to watch URL for a match.
+    
+    URL format: https://ppv.to/live/wc/{date}/{team1}-{team2}
+    
+    Where:
+    - date is kickoff_utc date in YYYY-MM-DD format
+    - team1 is home_team tla lowercased
+    - team2 is away_team tla lowercased
+    
+    Example: https://ppv.to/live/wc/2026-06-18/cze-rsa
+    
+    Returns None if tla is missing for either team.
+    """
+    try:
+        home_tla = safe_get(match, ["home_team", "tla"], "")
+        away_tla = safe_get(match, ["away_team", "tla"], "")
+        
+        if not home_tla or not away_tla:
+            return None
+        
+        kickoff_utc = safe_get(match, ["kickoff_utc"], "")
+        if not kickoff_utc:
+            return None
+        
+        date = kickoff_utc[:10]  # Extract YYYY-MM-DD
+        
+        url = f"https://ppv.to/live/wc/{date}/{home_tla.lower()}-{away_tla.lower()}"
+        return url
+    except:
+        return None
