@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import pytz
 from datetime import datetime
 
-from components import create_header, create_demo_banner, create_match_cards, create_matches_table, create_standings_section, create_top_scorers_section, create_empty_state, create_countdown
+from components import create_header, create_demo_banner, create_match_cards, create_matches_table, create_standings_section, create_top_scorers_section, create_empty_state, create_countdown, create_knockout_bracket
 from data_store import (
     get_smart_match_cards,
     get_today_matches,
@@ -19,7 +19,8 @@ from data_store import (
     get_standings,
     get_top_scorers,
     is_using_real_data,
-    get_next_match
+    get_next_match,
+    get_knockout_matches
 )
 
 load_dotenv()
@@ -220,7 +221,14 @@ app.layout = html.Div(
                             children=create_standings_section(get_standings())
                         )
                     ],
-                    style={"marginTop": "40px", "paddingBottom": "50px"}
+                    style={"marginTop": "40px", "marginBottom": "40px"}
+                ),
+                
+                # Knockout Bracket Section
+                html.Div(
+                    id="knockout-bracket-section",
+                    children=create_knockout_bracket(get_knockout_matches()),
+                    style={"paddingBottom": "50px"}
                 )
             ],
             fluid=True,
@@ -308,6 +316,16 @@ def refresh_standard_data(n_intervals):
     scorers = create_top_scorers_section(get_top_scorers())
     standings = create_standings_section(get_standings())
     return today, upcoming, completed, scorers, standings
+
+
+@app.callback(
+    Output("knockout-bracket-section", "children"),
+    Input("standard-interval", "n_intervals"),
+    prevent_initial_call=True
+)
+def update_knockout_bracket(n):
+    data = get_knockout_matches()
+    return create_knockout_bracket(data)
 
 
 if __name__ == "__main__":

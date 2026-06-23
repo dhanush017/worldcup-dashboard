@@ -597,6 +597,51 @@ def get_top_scorers():
         return cached
     return fallback_data.DEMO_SCORERS
 
+def get_knockout_matches():
+    """GET /competitions/WC/matches
+    
+    Filter response where stage is NOT "GROUP_STAGE"
+    Normalize each match using normalize_match()
+    Group matches by stage in specific order.
+    """
+    endpoint = "knockout_matches"
+    import data_store
+
+    if data_store.is_cache_fresh(endpoint):
+        cached = data_store.load_cache(endpoint)
+        if cached is not None:
+            return cached
+
+    try:
+        url = f"{BASE_URL}/competitions/{COMPETITION_CODE}/matches"
+        resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
+        if resp.status_code == 200:
+            data = resp.json()
+            matches_list = safe_get(data, ["matches"], [])
+            
+            result = {
+                "ROUND_OF_32": [],
+                "ROUND_OF_16": [],
+                "QUARTER_FINALS": [],
+                "SEMI_FINALS": [],
+                "THIRD_PLACE": [],
+                "FINAL": []
+            }
+            
+            for m in matches_list:
+                stage = safe_get(m, ["stage"], "")
+                if stage and stage != "GROUP_STAGE" and stage in result:
+                    result[stage].append(normalize_match(m))
+                    
+            data_store.save_cache(endpoint, result)
+            data_store.increment_api_counter()
+            return result
+    except Exception:
+        pass
+
+    return {}
+
+
 
 def get_match_events(fixture_id):
     """GET /fixtures/events?fixture={fixture_id} (Not used in v4 for now, returns empty list)"""

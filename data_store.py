@@ -334,3 +334,18 @@ def get_smart_match_cards():
         return fallback_data.DEMO_MATCHES[:3]
         
     return selected
+
+
+def get_knockout_matches():
+    """Calls football_api.get_knockout_matches()
+    Returns empty dict if API fails.
+    Never uses fallback data for knockout bracket —
+    just shows empty state instead."""
+    global LAST_API_SUCCESS
+    res = football_api.get_knockout_matches()
+    if res and isinstance(res, dict):
+        LAST_API_SUCCESS = True
+        return res
+    LAST_API_SUCCESS = False
+    return {}
+

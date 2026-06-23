@@ -962,6 +962,174 @@ def create_top_scorers_section(scorers):
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Knockout Bracket
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def create_knockout_bracket(knockout_matches):
+    """Creates a visual knockout bracket."""
+    if not knockout_matches or all(len(matches) == 0 for matches in knockout_matches.values()):
+        return html.Div(
+            [
+                html.H3("Knockout Stage", style={"color": "#F8FAFC", "marginBottom": "16px", "fontWeight": "bold", "fontSize": "20px"}),
+                create_empty_state("Knockout stage begins June 29")
+            ]
+        )
+
+    stage_labels = {
+        "ROUND_OF_32": "Round of 32",
+        "ROUND_OF_16": "Round of 16",
+        "QUARTER_FINALS": "Quarter Finals",
+        "SEMI_FINALS": "Semi Finals",
+        "THIRD_PLACE": "3rd Place",
+        "FINAL": "Final 🏆"
+    }
+
+    columns = []
+    
+    for stage_key, label in stage_labels.items():
+        matches = knockout_matches.get(stage_key, [])
+        match_cards = []
+        
+        if not matches:
+            # Placeholder card
+            match_cards.append(
+                html.Div(
+                    [
+                        html.Div("TBD", style={"color": "#94A3B8", "fontSize": "13px", "textAlign": "center"}),
+                        html.Div("vs", style={"color": "#64748B", "fontSize": "11px", "textAlign": "center", "margin": "4px 0"}),
+                        html.Div("TBD", style={"color": "#94A3B8", "fontSize": "13px", "textAlign": "center"}),
+                    ],
+                    style={
+                        "backgroundColor": "#121824",
+                        "border": "1px dashed #1E293B",
+                        "borderRadius": "8px",
+                        "padding": "12px",
+                        "marginBottom": "12px",
+                        "width": "180px"
+                    }
+                )
+            )
+        else:
+            for m in matches:
+                status = m.get("status", "scheduled")
+                home = m.get("home_team", {})
+                away = m.get("away_team", {})
+                home_name = home.get("name", "TBD")
+                away_name = away.get("name", "TBD")
+                home_flag = home.get("flag", "")
+                away_flag = away.get("flag", "")
+                
+                score = m.get("score", {})
+                home_score = score.get("home")
+                away_score = score.get("away")
+                home_score_val = home_score if home_score is not None else 0
+                away_score_val = away_score if away_score is not None else 0
+                
+                home_fw = "bold" if status == "completed" and home_score_val > away_score_val else "normal"
+                home_color = "#F8FAFC" if status == "completed" and home_score_val > away_score_val else "#E2E8F0"
+                away_fw = "bold" if status == "completed" and away_score_val > home_score_val else "normal"
+                away_color = "#F8FAFC" if status == "completed" and away_score_val > home_score_val else "#E2E8F0"
+
+                if status == "completed":
+                    middle_text = f"{home_score_val} - {away_score_val}"
+                    middle_color = "#10B981"
+                    card_border = "1px solid #10B981"
+                else:
+                    middle_text = "vs"
+                    middle_color = "#94A3B8"
+                    card_border = "1px solid #1E293B"
+
+                kickoff_ist_display = m.get("kickoff_ist_display", "")
+                date_str = m.get("kickoff_ist", "")
+                date_display = ""
+                if date_str:
+                    try:
+                        date_obj = datetime.strptime(date_str[:10], "%Y-%m-%d")
+                        date_display = date_obj.strftime("%b %d")
+                    except:
+                        pass
+                if date_display and kickoff_ist_display:
+                    date_display = f"{date_display} · {kickoff_ist_display}"
+                elif kickoff_ist_display:
+                    date_display = kickoff_ist_display
+
+                match_cards.append(
+                    html.Div(
+                        [
+                            html.Div(
+                                [
+                                    html.Img(src=home_flag, style={"width": "16px", "height": "12px", "marginRight": "6px", "borderRadius": "2px", "objectFit": "cover"}) if home_flag else None,
+                                    html.Span(home_name, style={"fontWeight": home_fw, "color": home_color, "fontSize": "13px", "whiteSpace": "nowrap", "overflow": "hidden", "textOverflow": "ellipsis"})
+                                ],
+                                style={"display": "flex", "alignItems": "center", "marginBottom": "4px"}
+                            ),
+                            html.Div(
+                                middle_text,
+                                style={"color": middle_color, "fontSize": "13px", "fontWeight": "bold", "textAlign": "center", "margin": "4px 0"}
+                            ),
+                            html.Div(
+                                [
+                                    html.Img(src=away_flag, style={"width": "16px", "height": "12px", "marginRight": "6px", "borderRadius": "2px", "objectFit": "cover"}) if away_flag else None,
+                                    html.Span(away_name, style={"fontWeight": away_fw, "color": away_color, "fontSize": "13px", "whiteSpace": "nowrap", "overflow": "hidden", "textOverflow": "ellipsis"})
+                                ],
+                                style={"display": "flex", "alignItems": "center", "marginTop": "4px"}
+                            ),
+                            html.Div(
+                                date_display if status != "completed" else "Full Time",
+                                style={"color": "#64748B", "fontSize": "10px", "textAlign": "center", "marginTop": "8px"}
+                            )
+                        ],
+                        style={
+                            "backgroundColor": "#121824",
+                            "border": card_border,
+                            "borderRadius": "8px",
+                            "padding": "12px",
+                            "marginBottom": "12px",
+                            "width": "180px",
+                            "boxShadow": "0 2px 4px rgba(0,0,0,0.1)"
+                        }
+                    )
+                )
+
+        col = html.Div(
+            [
+                html.Div(label, style={"color": "#00C2FF", "fontWeight": "bold", "fontSize": "14px", "marginBottom": "16px", "textAlign": "center", "textTransform": "uppercase"}),
+                html.Div(match_cards, style={"display": "flex", "flexDirection": "column", "alignItems": "center"})
+            ],
+            style={"marginRight": "24px", "minWidth": "180px"}
+        )
+        columns.append(col)
+
+    bracket_container = html.Div(
+        columns,
+        style={
+            "display": "flex",
+            "flexDirection": "row",
+            "overflowX": "auto",
+            "paddingBottom": "16px",
+            "alignItems": "flex-start"
+        }
+    )
+
+    return html.Div(
+        [
+            html.H3("Knockout Stage", style={"color": "#F8FAFC", "marginBottom": "16px", "fontWeight": "bold", "fontSize": "20px"}),
+            html.Div(
+                bracket_container,
+                style={
+                    "backgroundColor": "#0F172A",
+                    "borderRadius": "12px",
+                    "padding": "24px",
+                    "border": "1px solid #1E293B"
+                }
+            )
+        ],
+        style={"marginBottom": "40px"}
+    )
+
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  7. create_empty_state
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
