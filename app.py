@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import pytz
 from datetime import datetime
 
-from components import create_header, create_demo_banner, create_match_cards, create_matches_table, create_standings_section, create_top_scorers_section, create_empty_state
+from components import create_header, create_demo_banner, create_match_cards, create_matches_table, create_standings_section, create_top_scorers_section, create_empty_state, create_countdown
 from data_store import (
     get_smart_match_cards,
     get_today_matches,
@@ -18,7 +18,8 @@ from data_store import (
     get_completed_matches,
     get_standings,
     get_top_scorers,
-    is_using_real_data
+    is_using_real_data,
+    get_next_match
 )
 
 load_dotenv()
@@ -34,6 +35,11 @@ def get_current_ist_time():
 app = dash.Dash(
     __name__,
     external_stylesheets=[dbc.themes.BOOTSTRAP],
+    title="CupPulse 2026",
+    update_title=None,
+    meta_tags=[
+        {"name": "viewport", "content": "width=device-width, initial-scale=1"}
+    ]
 )
 
 server = app.server
@@ -119,6 +125,9 @@ app.layout = html.Div(
         # Main Dashboard Container
         dbc.Container(
             [
+                # Countdown Timer
+                html.Div(id="countdown-container"),
+                
                 # Featured Matches Section
                 html.Div(
                     [
@@ -265,6 +274,18 @@ def refresh_live_data(n_intervals):
 def update_demo_banner(n):
     demo_mode = not is_using_real_data()
     return create_demo_banner() if demo_mode else None
+
+@app.callback(
+    Output("countdown-container", "children"),
+    Input("live-interval", "n_intervals")
+)
+def update_countdown_timer(n_intervals):
+    live_matches = get_live_matches()
+    if live_matches:
+        return create_countdown(live_matches[0])
+    
+    next_match = get_next_match()
+    return create_countdown(next_match)
 
 
 # Callback 2: Standard Interval Refresh (every 10 minutes)

@@ -361,6 +361,71 @@ def get_completed_matches():
             completed = [m for m in all_matches if m.get("status") == "completed"]
             completed = sorted(completed, key=lambda x: x.get("kickoff_utc", ""), reverse=True)
             result = completed[:10]
+            
+            num_fetched = 0
+            for match in result:
+                fixture_id = match.get("fixture_id")
+                if not fixture_id:
+                    continue
+                    
+                cache_key = f"match_detail_{fixture_id}"
+                
+                if data_store.is_cache_fresh(cache_key):
+                    cached_detail = data_store.load_cache(cache_key)
+                    if cached_detail is not None:
+                        match["events"] = cached_detail
+                        continue
+                        
+                if num_fetched >= 5:
+                    match["events"] = []
+                    continue
+                    
+                try:
+                    url = f"{BASE_URL}/matches/{fixture_id}"
+                    resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        goals_data = safe_get(data, ["match", "goals"], [])
+                        if not isinstance(goals_data, list):
+                            goals_data = []
+                            
+                        events = []
+                        for g in goals_data:
+                            minute = safe_get(g, ["minute"])
+                            if minute is None:
+                                minute = 0
+                            else:
+                                minute = int(minute)
+                                
+                            scorer = safe_get(g, ["scorer", "name"], "Unknown")
+                            team = safe_get(g, ["team", "name"], "Unknown")
+                            gtype_raw = safe_get(g, ["type"], "REGULAR")
+                            
+                            if gtype_raw == "OWN_GOAL":
+                                gtype = "own_goal"
+                            elif gtype_raw == "PENALTY":
+                                gtype = "penalty"
+                            else:
+                                gtype = "goal"
+                                
+                            events.append({
+                                "minute": minute,
+                                "scorer": scorer,
+                                "team": team,
+                                "type": gtype
+                            })
+                            
+                        events = sorted(events, key=lambda x: x.get("minute", 0))
+                        match["events"] = events
+                        
+                        data_store.save_cache(cache_key, events)
+                        data_store.increment_api_counter()
+                        num_fetched += 1
+                    else:
+                        match["events"] = []
+                except Exception:
+                    match["events"] = []
+            
             data_store.save_cache(endpoint, result)
             data_store.increment_api_counter()
             return result

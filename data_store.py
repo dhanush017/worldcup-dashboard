@@ -267,6 +267,14 @@ def get_upcoming_matches():
     return fallback_data.DEMO_UPCOMING
 
 
+def get_next_match():
+    """Returns the single next scheduled match or None."""
+    upcoming = get_upcoming_matches()
+    if upcoming and len(upcoming) > 0:
+        return upcoming[0]
+    return None
+
+
 def get_completed_matches():
     """Get completed matches list, falling back to mock data if empty/None."""
     global LAST_API_SUCCESS

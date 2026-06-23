@@ -1,10 +1,103 @@
 import dash_bootstrap_components as dbc
 from dash import html, dcc
-from utils import get_watch_url
+from utils import get_watch_url, safe_get
+from datetime import datetime
+import pytz
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  1. create_header
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def create_countdown(next_match):
+    """Creates a countdown timer to the next scheduled match.
+    
+    next_match is a normalized match object.
+    
+    Display format:
+    "Next Match: Brazil vs Germany"
+    "Starts in: 2h 34m"
+    
+    Calculate time difference between now (IST) and 
+    kickoff_ist of the next_match.
+    
+    If less than 1 hour: show "Starts in: 45m"
+    If less than 1 day: show "Starts in: 2h 34m"
+    If more than 1 day: show "Starts in: 1d 4h"
+    If match is live: show "LIVE NOW 🔴" instead of countdown
+    If no upcoming match: show "No upcoming matches scheduled"
+    
+    Style: dark card, centered text, accent color for the time,
+    placed between the header and match cards in the layout.
+    """
+    if not next_match:
+        return html.Div(
+            "No upcoming matches scheduled",
+            style={
+                "backgroundColor": "#121824",
+                "borderRadius": "12px",
+                "padding": "24px",
+                "textAlign": "center",
+                "color": "#94A3B8",
+                "border": "1px solid #1E293B",
+                "margin": "20px 0",
+                "boxShadow": "0 4px 6px rgba(0, 0, 0, 0.2)"
+            }
+        )
+        
+    status = safe_get(next_match, ["status"], "scheduled")
+    home_name = safe_get(next_match, ["home_team", "name"], "TBD")
+    away_name = safe_get(next_match, ["away_team", "name"], "TBD")
+    match_title = f"{home_name} vs {away_name}"
+    
+    if status == "live":
+        time_display = "LIVE NOW 🔴"
+        time_color = "#FF3B3B"
+    else:
+        kickoff_str = safe_get(next_match, ["kickoff_ist"])
+        if not kickoff_str:
+            time_display = "Time TBD"
+            time_color = "#94A3B8"
+        else:
+            try:
+                kickoff_dt = datetime.fromisoformat(kickoff_str)
+                tz = pytz.timezone("Asia/Kolkata")
+                now_ist = datetime.now(tz)
+                diff = kickoff_dt - now_ist
+                
+                if diff.total_seconds() <= 0:
+                    time_display = "LIVE NOW 🔴"
+                    time_color = "#FF3B3B"
+                else:
+                    days = diff.days
+                    hours, rem = divmod(diff.seconds, 3600)
+                    minutes, _ = divmod(rem, 60)
+                    
+                    if days > 0:
+                        time_display = f"Starts in: {days}d {hours}h"
+                    elif hours > 0:
+                        time_display = f"Starts in: {hours}h {minutes}m"
+                    else:
+                        time_display = f"Starts in: {minutes}m"
+                    time_color = "#00C2FF"
+            except Exception:
+                time_display = "Time TBD"
+                time_color = "#94A3B8"
+
+    return html.Div(
+        [
+            html.Div(f"Next Match: {match_title}", style={"color": "#F8FAFC", "fontWeight": "bold", "fontSize": "16px", "marginBottom": "8px"}),
+            html.Div(time_display, style={"color": time_color, "fontWeight": "bold", "fontSize": "24px", "letterSpacing": "1px"})
+        ],
+        style={
+            "backgroundColor": "#121824",
+            "borderRadius": "12px",
+            "padding": "24px",
+            "textAlign": "center",
+            "border": "1px solid #1E293B",
+            "boxShadow": "0 4px 6px rgba(0, 0, 0, 0.2)",
+            "margin": "20px 0"
+        }
+    )
 
 def create_demo_banner():
     """Returns the demo mode banner component."""
@@ -95,23 +188,42 @@ def create_match_card(match):
     if not match:
         return html.Div()
         
-    status = match.get("status", "scheduled")
-    status_display = match.get("status_display", "")
-    kickoff_ist_display = match.get("kickoff_ist_display", "")
-    venue = match.get("venue", "")
-    group = match.get("group", "")
-    round_name = match.get("round", "")
+    status = safe_get(match, ["status"], "scheduled")
+    status_display = safe_get(match, ["status_display"], "")
+    kickoff_ist = safe_get(match, ["kickoff_ist"])
+    kickoff_ist_display = safe_get(match, ["kickoff_ist_display"], "")
+    venue = safe_get(match, ["venue"], "")
+    group = safe_get(match, ["group"], "")
+    round_name = safe_get(match, ["round"], "")
     
-    home_team = match.get("home_team", {}) or {}
-    away_team = match.get("away_team", {}) or {}
-    home_name = home_team.get("name", "TBD")
-    home_flag = home_team.get("flag", "")
-    away_name = away_team.get("name", "TBD")
-    away_flag = away_team.get("flag", "")
+    home_name = safe_get(match, ["home_team", "name"], "TBD")
+    home_flag = safe_get(match, ["home_team", "flag"], "")
+    away_name = safe_get(match, ["away_team", "name"], "TBD")
+    away_flag = safe_get(match, ["away_team", "flag"], "")
     
-    score = match.get("score", {}) or {}
-    home_score = score.get("home")
-    away_score = score.get("away")
+    home_score = safe_get(match, ["score", "home"])
+    away_score = safe_get(match, ["score", "away"])
+
+    match_date_str = ""
+    if kickoff_ist:
+        try:
+            date_obj = datetime.strptime(kickoff_ist[:10], "%Y-%m-%d")
+            match_date_str = date_obj.strftime("%b ") + str(date_obj.day)
+        except:
+            pass
+
+    if status == "live":
+        final_time_display = status_display
+    elif status == "completed":
+        if match_date_str:
+            final_time_display = f"{match_date_str} · Full Time"
+        else:
+            final_time_display = status_display or "Full Time"
+    else:
+        if match_date_str and kickoff_ist_display:
+            final_time_display = f"{match_date_str} · {kickoff_ist_display}"
+        else:
+            final_time_display = kickoff_ist_display
     
     card_style = {
         "backgroundColor": "#121824",
@@ -276,12 +388,9 @@ def create_match_card(match):
     info_div = html.Div(
         [
             html.Div(
-                [
-                    html.Span("Kickoff: ", style={"color": "#64748B", "fontSize": "11px"}),
-                    html.Span(kickoff_ist_display, style={"color": "#94A3B8", "fontSize": "11px", "fontWeight": "500"})
-                ],
-                style={"marginBottom": "2px"}
-            ) if kickoff_ist_display else None,
+                final_time_display,
+                style={"color": "#94A3B8", "fontSize": "11px", "fontWeight": "500", "marginBottom": "2px"}
+            ) if final_time_display else None,
             html.Div(
                 venue,
                 style={
@@ -298,12 +407,12 @@ def create_match_card(match):
     
     card_content = [header_div, teams_row, info_div]
     
-    win_prob = match.get("win_probability")
+    win_prob = safe_get(match, ["win_probability"])
     if win_prob is not None:
         if isinstance(win_prob, dict):
-            home_p = win_prob.get("home", 0)
-            draw_p = win_prob.get("draw", 0)
-            away_p = win_prob.get("away", 0)
+            home_p = safe_get(win_prob, ["home"], 0)
+            draw_p = safe_get(win_prob, ["draw"], 0)
+            away_p = safe_get(win_prob, ["away"], 0)
             win_prob_elem = html.Div(
                 [
                     html.Div("Win Probability", style={"fontSize": "10px", "color": "#64748B", "textAlign": "center", "marginBottom": "6px", "textTransform": "uppercase", "letterSpacing": "0.5px"}),
